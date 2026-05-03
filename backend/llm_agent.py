@@ -20,10 +20,13 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     target_gw = scout_data.get('target_gw', 'Unknown')
     bank = scout_data.get('bank', 0)
     
-    # Format the current starting lineup with exact team names, costs, and Social EP
+    # Map element_type to position
+    pos_map = {1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD'}
+    
+    # Format the current starting lineup with exact team names, positions, costs, and Social EP
     current_lineup = scout_data.get('current_lineup', [])
-    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Starting']
-    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Bench']
+    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {pos_map.get(p.get('element_type'), 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Starting']
+    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {pos_map.get(p.get('element_type'), 'Unknown')}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Bench']
     
     # Format the AI action plans
     plans = scout_data.get('action_plans', [])
@@ -91,12 +94,14 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     - Wildcard: Permanent unlimited transfers. Use when the squad is fundamentally broken long-term.
     
     CRITICAL BEHAVIOR GUIDELINES:
-    1. NEVER hallucinate facts. Use the exact names, teams, and costs provided above.
-    2. NEVER hallucinate fixtures. STRICTLY use the 'Upcoming Fixtures' data block.
-    3. If asked an unanswerable question, reply exactly: "Sorry, I cannot answer that accurately right now."
-    4. Be highly critical. If the user suggests a bad transfer, explicitly tell them. Use the Market Intel to suggest superior targets.
-    5. STRICT TRANSFER MATH RULE: If you recommend a transfer, you MUST recommend a valid 1-for-1 or 2-for-2 swap. You MUST ensure the cost of the players being bought is less than or equal to the (cost of players sold + Current Bank Balance). Never recommend selling 3 and buying 2.
-    6. DELIVERABLES: Always end your response with a clear, actionable insight block. Example: "ACTION: Sell [Player] and Buy [Player]."
+    1. NEVER hallucinate facts. Use the exact names, teams, positions, and costs provided above.
+    2. NEVER hallucinate fixtures or guess which teams are playing. STRICTLY use the 'Upcoming Fixtures' data block. If a player's fixture is not listed in the data block, do NOT mention it.
+    3. STRICT POSITION RULE: FPL requires transferring a player for a player of the SAME POSITION. You MUST NEVER suggest transferring a DEF for a MID or FWD. Only recommend valid 1-for-1 positional swaps.
+    4. MAX 3 PLAYERS PER TEAM RULE: In FPL, a manager can have a MAXIMUM of 3 players from the same Premier League team. Before recommending a player to buy, you MUST check the Current Squad provided above to ensure buying that player will not exceed the 3-player limit for that team.
+    5. If asked an unanswerable question, reply exactly: "Sorry, I cannot answer that accurately right now."
+    6. Be highly critical. If the user suggests a bad transfer, explicitly tell them. Use the Market Intel to suggest superior targets.
+    7. STRICT TRANSFER MATH RULE: If you recommend a transfer, you MUST recommend a valid 1-for-1 or 2-for-2 swap. You MUST ensure the cost of the players being bought is less than or equal to the (cost of players sold + Current Bank Balance). Never recommend selling 3 and buying 2.
+    8. DELIVERABLES: Always end your response with a clear, actionable insight block. Example: "ACTION: Sell [Player] and Buy [Player]."
     7. Answer concisely. Use markdown for bolding player names.
     """
     
