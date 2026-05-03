@@ -420,10 +420,18 @@ function PlayerRow({ player, isBench, benchOrder, trendingReason }) {
       </div>
       <div className="text-right flex flex-col items-end gap-1">
         <span className="text-sm font-bold text-emerald-400 flex items-center gap-2">
-          {player.social_ep > player.ep_next && <span className="text-[9px] bg-amber-500/20 text-amber-500 px-1 border border-amber-500/50">SOCIAL EP</span>}
-          {player.social_ep > player.ep_next ? player.social_ep.toFixed(1) : player.ep_next.toFixed(1)}
+          {player.is_ep_anomaly && (
+            <span className="text-sm cursor-help" title="⚠️ FPL Math Anomaly: Player is fit but officially projected 0.0 points">❓</span>
+          )}
+          {player.ep_next.toFixed(1)}
         </span>
-        <span className="text-[10px] text-slate-500 font-mono">£{(player.now_cost / 10).toFixed(1)}m</span>
+        {player.social_ep > player.ep_next ? (
+          <span className="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1 border border-amber-500/30">
+            [HYPE BOOST +{(player.social_ep - player.ep_next).toFixed(1)}]
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-500 font-mono">£{(player.now_cost / 10).toFixed(1)}m</span>
+        )}
       </div>
     </div>
   );

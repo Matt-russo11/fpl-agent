@@ -22,8 +22,8 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     
     # Format the current starting lineup with exact team names, costs, and Social EP
     current_lineup = scout_data.get('current_lineup', [])
-    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - Social EP: {p.get('social_ep', p.get('ep_next', 0))}" for p in current_lineup if p.get('status') == 'Starting']
-    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - Social EP: {p.get('social_ep', p.get('ep_next', 0))}" for p in current_lineup if p.get('status') == 'Bench']
+    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Starting']
+    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)} (Social EP: {p.get('social_ep', p.get('ep_next', 0))})" for p in current_lineup if p.get('status') == 'Bench']
     
     # Format the AI action plans
     plans = scout_data.get('action_plans', [])
@@ -71,9 +71,11 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     
     Current Bank Balance: £{bank}m
     
-    Current Squad (Name (Team) - Cost - Expected Points):
+    Current Squad (Name (Team) - Cost - Math EP (Social EP)):
     Starting XI: {", ".join(starters)}
     Bench: {", ".join(bench)}
+    
+    (Note: If Social EP is higher than Math EP, the player has strong community momentum. If Math EP is 0.0 but Social EP is higher, the 0.0 is an official FPL API bug and the player is fit.)
     
     Algorithm Suggested Transfer Plans:
     {plan_context}

@@ -40,7 +40,8 @@ def get_trending_players(elements):
     
     Identify any Premier League soccer players being actively hyped up, discussed as good transfers, or mentioned as essential (or players returning from injury).
     Assign each player a "hype_score" from 1 to 10 based on how strongly the community is praising them.
-    Return ONLY a raw JSON array of objects with 'name', 'reason', and 'hype_score' (int). Do not include markdown code blocks.
+    Return ONLY a raw JSON array of objects with 'name', 'reason', and 'hype_score' (int).
+    CRITICAL RULE: DO NOT hallucinate player positions (e.g. "in the midfield") or guess facts. Only summarize the exact words in the headline.
     Example: [{{"name": "Palmer", "reason": "Scored a hattrick in the cup", "hype_score": 9}}]
     If no one is clearly trending, return [].
     """

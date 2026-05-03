@@ -247,6 +247,10 @@ def analyze_team(manager_id):
         if pid in trending_dict:
             hype_score = trending_dict[pid].get('hype_score', 5)
             social_ep = round(ep_next + (hype_score * 0.4), 1)
+            
+        # Anomaly Detection: Fit but 0.0 points
+        chance = player.get('chance_of_playing_next_round')
+        is_anomaly = (ep_next <= 0.0) and (chance is None or chance == 100)
 
         player_dict[pid] = {
             'id': pid,
@@ -255,6 +259,7 @@ def analyze_team(manager_id):
             'now_cost': player['now_cost'],
             'ep_next': ep_next,
             'social_ep': social_ep,
+            'is_ep_anomaly': is_anomaly,
             'team_id': player['team'],
             'team_name': team_dict_short[player['team']],
             'is_captain': False,
