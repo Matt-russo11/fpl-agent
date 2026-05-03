@@ -1,43 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 function App() {
   const [scoutData, setScoutData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [managerIdInput, setManagerIdInput] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const scoutResponse = await fetch(`${apiUrl}/api/scout-report`);
+  const fetchData = useCallback(async (targetId = null) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const url = targetId 
+        ? `${apiUrl}/api/scout-report?manager_id=${targetId}` 
+        : `${apiUrl}/api/scout-report`;
         
-        if (!scoutResponse.ok) {
-          throw new Error('Failed to fetch data from backend');
-        }
-        
-        const scout = await scoutResponse.json();
-        setScoutData(scout);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      const scoutResponse = await fetch(url);
+      
+      if (!scoutResponse.ok) {
+        const errorData = await scoutResponse.json();
+        throw new Error(errorData.detail || 'Failed to fetch data from backend');
       }
-    };
-
-    fetchData();
+      
+      const scout = await scoutResponse.json();
+      setScoutData(scout);
+    } catch (err) {
+      setError(err.message);
+      setScoutData(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial fetch (will use backend ENV fallback if no ID provided)
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (managerIdInput.trim()) {
+      fetchData(managerIdInput.trim());
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0D14] text-slate-300 font-mono p-4 md:p-8 selection:bg-emerald-500/30">
       <div className="max-w-7xl mx-auto space-y-8">
-        <header className="border-b border-slate-800 pb-6 mb-8 flex flex-col md:flex-row justify-between items-end">
+        <header className="border-b border-slate-800 pb-6 mb-8 flex flex-col lg:flex-row justify-between items-end gap-6">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">FPL_AGENT_TERMINAL</h1>
-            <p className="text-slate-500 text-sm mt-1">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
+            <p className="text-slate-500 text-sm mt-1 mb-4">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
+            
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Enter FPL Manager ID..."
+                value={managerIdInput}
+                onChange={(e) => setManagerIdInput(e.target.value)}
+                className="bg-[#0E121C] border border-slate-700 text-slate-200 text-sm px-3 py-1.5 focus:outline-none focus:border-emerald-500 w-64 transition-colors"
+              />
+              <button 
+                type="submit"
+                disabled={loading}
+                className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/20 px-4 py-1.5 text-sm font-bold uppercase tracking-widest disabled:opacity-50 transition-colors"
+              >
+                Analyze
+              </button>
+            </form>
           </div>
+          
           {scoutData && (
-            <div className="text-right mt-4 md:mt-0 flex flex-wrap gap-6">
+            <div className="flex flex-wrap gap-6">
                <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">Bank Balance</p>
                   <p className="text-xl text-emerald-400 font-bold">£{scoutData.bank.toFixed(1)}m</p>
@@ -56,17 +91,17 @@ function App() {
 
         {loading && (
           <div className="flex justify-center items-center h-64">
-            <p className="text-emerald-500 animate-pulse">INITIATING DATA FETCH...</p>
+            <p className="text-emerald-500 animate-pulse">INITIATING DATA FETCH AND SQUAD ANALYSIS...</p>
           </div>
         )}
 
-        {error && (
+        {error && !loading && (
           <div className="border-l-2 border-red-500 bg-red-500/10 p-4">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
 
-        {scoutData && (
+        {scoutData && !loading && (
           <div className="space-y-8 animate-fade-in-up">
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               
@@ -231,7 +266,7 @@ function LeagueIntel({ intel }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Injury Ward */}
         <div className="border border-slate-800 bg-[#0E121C] p-4 lg:col-span-2 h-64 overflow-y-auto custom-scrollbar">
-          <h3 className="text-[10px] text-red-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C]">Injury Ward (Top Owned)</h3>
+          <h3 className="text-[10px] text-red-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C] z-10">Injury Ward (Top Owned)</h3>
           <div className="space-y-2">
             {intel.injury_ward.map((p, i) => (
               <div key={i} className="flex justify-between items-center text-sm border-l-2 border-red-500/30 pl-2">
@@ -250,7 +285,7 @@ function LeagueIntel({ intel }) {
 
         {/* League Leaders (Stats) */}
         <div className="border border-slate-800 bg-[#0E121C] p-4 lg:col-span-2 h-64 overflow-y-auto custom-scrollbar">
-          <h3 className="text-[10px] text-cyan-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C]">League Leaders</h3>
+          <h3 className="text-[10px] text-cyan-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C] z-10">League Leaders</h3>
           
           <div className="grid grid-cols-2 gap-6">
             <StatList title="Most Assists" data={intel.leaders.assists} />
@@ -266,7 +301,7 @@ function LeagueIntel({ intel }) {
 
         {/* Team Specifics */}
         <div className="border border-slate-800 bg-[#0E121C] p-4 lg:col-span-4 max-h-80 overflow-y-auto custom-scrollbar">
-          <h3 className="text-[10px] text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C]">Team Specialists</h3>
+          <h3 className="text-[10px] text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C] z-10">Team Specialists</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
              {intel.teams.map((t, i) => (
                 <div key={i} className="bg-slate-900/50 p-3 border border-slate-800/50 rounded-sm hover:border-slate-600 transition-colors">

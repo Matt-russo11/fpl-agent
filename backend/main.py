@@ -15,7 +15,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "https://your-fpl-scout.netlify.app",
+    "https://fpl-manager.netlify.app/",
 ]
 
 app.add_middleware(
@@ -82,13 +82,13 @@ def health_check():
     return {"status": "FPL Agent Active", "server_time": datetime.utcnow().isoformat()}
 
 @app.get("/api/scout-report")
-def get_scout_report():
+def get_scout_report(manager_id: str = None):
     """Returns the full intelligent scout analysis and optimal lineup."""
-    manager_id = os.getenv("FPL_MANAGER_ID")
-    if not manager_id:
-        raise HTTPException(status_code=400, detail="FPL_MANAGER_ID not configured in backend")
+    target_id = manager_id or os.getenv("FPL_MANAGER_ID")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Please provide an FPL Manager ID")
         
-    result = analyze_team(manager_id)
+    result = analyze_team(target_id)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
         
