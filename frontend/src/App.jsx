@@ -397,11 +397,14 @@ function PlayerRow({ player, isBench, benchOrder }) {
               </span>
             )}
           </span>
-          {player.injury_warning && (
-            <span className="text-[9px] text-red-400 mt-0.5" title={player.injury_warning}>
-              ⚠️ {player.injury_warning}
-            </span>
-          )}
+          <div className="flex items-center gap-2 mt-0.5">
+             <span className="text-[9px] text-slate-500 tracking-wider font-mono">{player.fixture_display}</span>
+             {player.injury_warning && (
+               <span className="text-[9px] text-red-400" title={player.injury_warning}>
+                 ⚠️ {player.injury_warning}
+               </span>
+             )}
+          </div>
         </div>
       </div>
       <div className="text-right flex items-center gap-3">

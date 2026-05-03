@@ -177,11 +177,27 @@ def analyze_team(manager_id):
         if event.get('is_current'): current_gw = event.get('id')
         if event.get('is_next'): next_gw = event.get('id')
             
+    team_dict_short = {t['id']: t['short_name'] for t in bootstrap['teams']}
     team_fixtures_next_gw = {team['id']: 0 for team in bootstrap['teams']}
+    team_next_fixture_display = {team['id']: "Blank" for team in bootstrap['teams']}
+    
     for f in fixtures:
         if f['event'] == next_gw:
             team_fixtures_next_gw[f['team_h']] += 1
             team_fixtures_next_gw[f['team_a']] += 1
+            
+            h_name = team_dict_short[f['team_h']]
+            a_name = team_dict_short[f['team_a']]
+            
+            if team_next_fixture_display[f['team_h']] == "Blank":
+                team_next_fixture_display[f['team_h']] = f"vs {a_name} (H)"
+            else:
+                team_next_fixture_display[f['team_h']] += f", vs {a_name} (H)"
+                
+            if team_next_fixture_display[f['team_a']] == "Blank":
+                team_next_fixture_display[f['team_a']] = f"vs {h_name} (A)"
+            else:
+                team_next_fixture_display[f['team_a']] += f", vs {h_name} (A)"
 
     try:
         team_picks_data = get_data(f"{FPL_BASE_URL}/entry/{manager_id}/event/{current_gw}/picks/")
@@ -223,7 +239,8 @@ def analyze_team(manager_id):
             'is_vice_captain': False,
             'role_display': '',
             'status': 'Bench',
-            'injury_warning': get_injury_warning(player)
+            'injury_warning': get_injury_warning(player),
+            'fixture_display': team_next_fixture_display.get(player['team'], "Blank")
         }
         my_players.append(player_dict.copy())
         

@@ -8,10 +8,10 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     if not api_key:
         return "Error: GROQ_API_KEY is not configured in the backend environment."
     
-    # Initialize the Groq LLM (Llama 3 is extremely fast and capable)
+    # Initialize the Groq LLM
     llm = ChatGroq(
         groq_api_key=api_key,
-        model_name="llama3-70b-8192", 
+        model_name="llama-3.1-8b-instant", 
         temperature=0.7
     )
     
