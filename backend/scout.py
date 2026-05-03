@@ -106,6 +106,7 @@ def get_league_intel(elements, teams):
         return [{'name': p['web_name'], 'team': team_dict.get(p['team']), 'val': func(p)} for p in valid[:5]]
 
     intel['leaders'] = {
+        'goals': top_5('goals_scored'),
         'assists': top_5('assists'),
         'goals_assists': top_5_custom(lambda p: int(p.get('goals_scored', 0)) + int(p.get('assists', 0))),
         'ict_index': top_5('ict_index', is_float=True),
@@ -236,13 +237,21 @@ def analyze_team(manager_id):
     trending = get_trending_players({t['id']: t for t in elements_list})
     
     # Merge Global Transfer Data
+    total_managers = bootstrap.get('total_players', 10000000)
     top_transfers = sorted(elements_list, key=lambda x: x.get('transfers_in_event', 0), reverse=True)[:5]
     for t in top_transfers:
         if not any(p['id'] == t['id'] for p in trending):
+            transfers_in = t.get('transfers_in_event', 0)
+            transfer_pct = (transfers_in / total_managers) * 100
+            ownership = t.get('selected_by_percent', '0.0')
+            ep_next = t.get('ep_next', '0.0')
+            
+            reason = f"Global Trend: {transfers_in:,} managers ({transfer_pct:.2f}% of world) bought them this week. Currently at {ownership}% total ownership with {ep_next} projected points."
+            
             trending.append({
                 'id': t['id'],
                 'name': t['web_name'],
-                'reason': f"Global Trend: Over {t.get('transfers_in_event', 0):,} managers transferred them in this week.",
+                'reason': reason,
                 'hype_score': 8 # Default high hype score for mass transfers
             })
             

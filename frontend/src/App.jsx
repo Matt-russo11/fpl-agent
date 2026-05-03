@@ -262,11 +262,11 @@ function App() {
 
             </div>
 
+            {/* Trending Players Hub (Moved above League Intel) */}
+            <TrendingHub trendingPlayers={scoutData.trending_players || []} />
+
             {/* League Intel Bottom Hub */}
             <LeagueIntel intel={scoutData.league_intel} />
-
-            {/* Trending Players Hub */}
-            <TrendingHub trendingPlayers={scoutData.trending_players || []} />
 
             {/* Season Timeline Matrix */}
             <SeasonTimeline timeline={scoutData.season_timeline} targetGw={scoutData.target_gw} />
@@ -528,14 +528,14 @@ function LeagueIntel({ intel }) {
           <h3 className="text-[10px] text-cyan-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-3 sticky top-0 bg-[#0E121C] z-10">League Leaders</h3>
           
           <div className="grid grid-cols-2 gap-6">
+            <StatList title="Most Goals" data={intel.leaders.goals} />
             <StatList title="Most Assists" data={intel.leaders.assists} />
             <StatList title="Goals + Assists" data={intel.leaders.goals_assists} />
-            <StatList title="Match Rating (ICT)" data={intel.leaders.ict_index} />
             <StatList title="Expected Goals (xG)" data={intel.leaders.xg} />
             <StatList title="Expected Assists (xA)" data={intel.leaders.xa} />
+            <StatList title="Match Rating (ICT)" data={intel.leaders.ict_index} />
             <StatList title="Most Tackles" data={intel.leaders.tackles} />
             <StatList title="Most Saves" data={intel.leaders.saves} />
-            <StatList title="Minutes Played" data={intel.leaders.minutes} />
           </div>
         </div>
 
