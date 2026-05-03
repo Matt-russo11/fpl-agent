@@ -585,23 +585,25 @@ function TrendingHub({ trendingPlayers }) {
     <div className="mt-8 border border-slate-800 bg-[#0E121C]">
       <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
         <h2 className="text-sm font-bold text-amber-500 tracking-widest uppercase flex items-center gap-2">
-           🔥 Hyped up Players to Buy (Global & Social Data)
+           🔥 Market Sentiment Hub (Buy & Sell Hype)
         </h2>
       </div>
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {trendingPlayers.map(p => (
-          <div key={p.id} className="border border-slate-800 bg-slate-900/50 p-3 flex flex-col gap-2 hover:border-amber-500/50 transition-colors">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-              <span className="font-bold text-white text-sm">{p.name}</span>
-              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-500 px-1.5 py-0.5 border border-amber-500/50">
+        {trendingPlayers.map(p => {
+          const isDropped = p.reason.includes('DROPPED');
+          return (
+          <div key={p.id} className={`border ${isDropped ? 'border-red-900/50 bg-red-950/20 hover:border-red-500/50' : 'border-slate-800 bg-slate-900/50 hover:border-amber-500/50'} p-3 flex flex-col gap-2 transition-colors`}>
+            <div className={`flex justify-between items-center border-b ${isDropped ? 'border-red-900/50' : 'border-slate-800'} pb-2`}>
+              <span className={`font-bold text-sm ${isDropped ? 'text-red-400' : 'text-white'}`}>{p.name}</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${isDropped ? 'bg-red-500/20 text-red-500 border-red-500/50' : 'bg-amber-500/20 text-amber-500 border-amber-500/50'}`}>
                 HYPE: {p.hype_score}/10
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed italic">
-              {p.reason.startsWith('Global Trend') ? '📈 ' : '💬 '}"{p.reason}"
+            <p className={`text-[11px] leading-relaxed italic ${isDropped ? 'text-red-400/80' : 'text-slate-400'}`}>
+              {p.reason.startsWith('Global Trend') ? (isDropped ? '📉 ' : '📈 ') : '💬 '}"{p.reason}"
             </p>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
