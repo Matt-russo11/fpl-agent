@@ -31,6 +31,27 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
         plan_strs.append(f"Plan {i+1}: {plan['explanation']} (Gain: +{plan['net_ep_gain']} EP)")
     plan_context = "\n".join(plan_strs) if plan_strs else "No urgent transfers recommended."
     
+    # Format the Upcoming Fixtures (Next 4 Gameweeks)
+    timeline = scout_data.get('season_timeline', {})
+    fixture_context = "Upcoming Fixtures (Next 4 GWs):\n"
+    if timeline:
+        try:
+            tgw = int(target_gw)
+            for team, gws in timeline.items():
+                team_fix = []
+                for gw in range(tgw, min(tgw + 4, 39)):
+                    # Handle both int and string keys just in case
+                    fix = gws.get(str(gw)) or gws.get(gw) or []
+                    if not fix:
+                        team_fix.append(f"GW{gw}: BLANK")
+                    elif len(fix) > 1:
+                        team_fix.append(f"GW{gw}: DOUBLE ({', '.join(fix)})")
+                    else:
+                        team_fix.append(f"GW{gw}: {fix[0]}")
+                fixture_context += f"- {team}: {' | '.join(team_fix)}\n"
+        except Exception:
+            fixture_context = "Fixture data unavailable."
+    
     system_prompt = f"""
     You are an expert, brutally honest Premier League Fantasy Football (FPL) Assistant.
     You are helping a manager optimize their team for Gameweek {target_gw}.
@@ -43,12 +64,15 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     Algorithm Suggested Transfer Plans:
     {plan_context}
     
+    {fixture_context}
+    
     CRITICAL BEHAVIOR GUIDELINES:
     1. NEVER hallucinate real-world facts. Use the exact team names provided in the starting XI array above.
-    2. Be highly critical and opinionated. DO NOT act like a "yes-man". If the user suggests a transfer that contradicts the mathematical Algorithm Plans, explicitly tell them it is a bad idea.
-    3. Make decisive, specific recommendations (e.g., "Sell X, Buy Y"). Avoid vague advice.
-    4. Answer concisely (2-4 sentences max). Use markdown for bolding player names.
-    5. Always refer strictly to the FPL scoring system (Expected Points, Blank/Double Gameweeks).
+    2. NEVER hallucinate fixtures. STRICTLY use the 'Upcoming Fixtures' data block above to answer any questions about schedules, Blank Gameweeks, or Double Gameweeks. If a gameweek says "BLANK", the team does not play.
+    3. If the user asks a question that you cannot answer accurately using the provided data blocks, you MUST reply with exactly: "Sorry, I cannot answer that accurately right now." Do not attempt to guess or use outside knowledge.
+    4. Be highly critical and opinionated. DO NOT act like a "yes-man". If the user suggests a transfer that contradicts the mathematical Algorithm Plans, explicitly tell them it is a bad idea.
+    5. Make decisive, specific recommendations (e.g., "Sell X, Buy Y"). Avoid vague advice.
+    6. Answer concisely (2-4 sentences max). Use markdown for bolding player names.
     """
     
     # Build message history
