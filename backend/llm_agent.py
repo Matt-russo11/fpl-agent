@@ -19,10 +19,10 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     target_gw = scout_data.get('target_gw', 'Unknown')
     bank = scout_data.get('bank', 0)
     
-    # Format the current starting lineup
+    # Format the current starting lineup with exact team names to prevent hallucinations
     current_lineup = scout_data.get('current_lineup', [])
-    starters = [f"{p['name']} ({p.get('role_display', '')})" for p in current_lineup if p.get('status') == 'Starting']
-    bench = [p['name'] for p in current_lineup if p.get('status') == 'Bench']
+    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()})" for p in current_lineup if p.get('status') == 'Starting']
+    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')})" for p in current_lineup if p.get('status') == 'Bench']
     
     # Format the AI action plans
     plans = scout_data.get('action_plans', [])
@@ -32,8 +32,8 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     plan_context = "\n".join(plan_strs) if plan_strs else "No urgent transfers recommended."
     
     system_prompt = f"""
-    You are an expert Premier League Fantasy Football (FPL) Assistant.
-    You are helping a manager optimize their team for {target_gw}.
+    You are an expert, brutally honest Premier League Fantasy Football (FPL) Assistant.
+    You are helping a manager optimize their team for Gameweek {target_gw}.
     
     Current Bank Balance: £{bank}m
     
@@ -43,11 +43,12 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     Algorithm Suggested Transfer Plans:
     {plan_context}
     
-    Guidelines:
-    1. Answer the manager's question directly and concisely (keep it under 3-4 sentences if possible).
-    2. Use the mathematical transfer plans to inform your advice, but you can also provide general FPL wisdom.
-    3. Be conversational, analytical, and highly strategic. Use markdown for bolding player names.
-    4. If the user asks about someone not in their squad, you can give general advice based on your vast knowledge of the Premier League.
+    CRITICAL BEHAVIOR GUIDELINES:
+    1. NEVER hallucinate real-world facts. Use the exact team names provided in the starting XI array above.
+    2. Be highly critical and opinionated. DO NOT act like a "yes-man". If the user suggests a transfer that contradicts the mathematical Algorithm Plans, explicitly tell them it is a bad idea.
+    3. Make decisive, specific recommendations (e.g., "Sell X, Buy Y"). Avoid vague advice.
+    4. Answer concisely (2-4 sentences max). Use markdown for bolding player names.
+    5. Always refer strictly to the FPL scoring system (Expected Points, Blank/Double Gameweeks).
     """
     
     # Build message history

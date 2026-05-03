@@ -164,7 +164,7 @@ def analyze_team(manager_id):
 
     try:
         bootstrap = get_data(f"{FPL_BASE_URL}/bootstrap-static/")
-        fixtures = get_data(f"{FPL_BASE_URL}/fixtures/?future=1")
+        fixtures = get_data(f"{FPL_BASE_URL}/fixtures/")
     except Exception as e:
         return {"error": f"Error fetching global data: {e}"}
 
@@ -198,6 +198,22 @@ def analyze_team(manager_id):
                 team_next_fixture_display[f['team_a']] = f"vs {h_name} (A)"
             else:
                 team_next_fixture_display[f['team_a']] += f", vs {h_name} (A)"
+
+    # Build full season timeline matrix (38 GWs)
+    season_timeline = {}
+    for t in bootstrap['teams']:
+        tid = t['id']
+        t_short = t['short_name']
+        season_timeline[t_short] = {gw: [] for gw in range(1, 39)}
+        
+    for f in fixtures:
+        gw = f.get('event')
+        if not gw: continue
+        h_short = team_dict_short[f['team_h']]
+        a_short = team_dict_short[f['team_a']]
+        
+        season_timeline[h_short][gw].append(f"vs {a_short} (H)")
+        season_timeline[a_short][gw].append(f"vs {h_short} (A)")
 
     try:
         team_picks_data = get_data(f"{FPL_BASE_URL}/entry/{manager_id}/event/{current_gw}/picks/")
@@ -235,6 +251,7 @@ def analyze_team(manager_id):
             'now_cost': player['now_cost'],
             'ep_next': ep_next,
             'team_id': player['team'],
+            'team_name': team_dict_short[player['team']],
             'is_captain': False,
             'is_vice_captain': False,
             'role_display': '',
@@ -354,7 +371,8 @@ def analyze_team(manager_id):
         "action_plans": action_plans,
         "current_lineup": current_lineup,
         "optimal_lineup": optimized_squad,
-        "league_intel": intel
+        "league_intel": intel,
+        "season_timeline": season_timeline
     }
 
 if __name__ == "__main__":
