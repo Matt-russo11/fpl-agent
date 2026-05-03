@@ -1,0 +1,8 @@
+langchain
+langgraph
+langchain-openai
+python-dotenv==1.0.1
+apscheduler
+fastapi
+uvicorn
+requests
