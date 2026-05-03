@@ -5,7 +5,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
+from pydantic import BaseModel
+from typing import List, Dict, Any
 from scout import analyze_team
+from llm_agent import get_ai_response
 
 load_dotenv()
 
@@ -93,6 +96,17 @@ def get_scout_report(manager_id: str = None):
         raise HTTPException(status_code=500, detail=result["error"])
         
     return result
+
+class ChatRequest(BaseModel):
+    message: str
+    scout_data: Dict[str, Any]
+    history: List[Dict[str, str]]
+
+@app.post("/api/chat")
+def chat_with_agent(req: ChatRequest):
+    """Passes user message and scout data to the LLM agent."""
+    reply = get_ai_response(req.message, req.scout_data, req.history)
+    return {"reply": reply}
 
 if __name__ == "__main__":
     import uvicorn
