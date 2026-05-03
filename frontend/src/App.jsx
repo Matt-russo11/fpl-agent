@@ -262,7 +262,12 @@ function App() {
 
             </div>
 
-            {/* Trending Players Hub (Moved above League Intel) */}
+            {/* Global Transfers Market */}
+            {scoutData.global_transfers && (
+              <GlobalTransfersHub transfers={scoutData.global_transfers} />
+            )}
+
+            {/* Trending Players Hub (Reddit) */}
             <TrendingHub trendingPlayers={scoutData.trending_players || []} />
 
             {/* League Intel Bottom Hub */}
@@ -580,30 +585,101 @@ function StatList({ title, data }) {
 }
 
 function TrendingHub({ trendingPlayers }) {
-  if (!trendingPlayers || trendingPlayers.length === 0) return null;
+  if (!trendingPlayers || trendingPlayers.length === 0) {
+    return (
+      <div className="mt-8 border border-slate-800 bg-[#0E121C]">
+        <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <h2 className="text-sm font-bold text-amber-500 tracking-widest uppercase flex items-center gap-2">
+             🔥 Market Sentiment Hub (Reddit Hype)
+          </h2>
+        </div>
+        <div className="p-8 text-center text-slate-500 italic">
+          No significant social momentum found on Reddit at this time.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-8 border border-slate-800 bg-[#0E121C]">
       <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
         <h2 className="text-sm font-bold text-amber-500 tracking-widest uppercase flex items-center gap-2">
-           🔥 Market Sentiment Hub (Buy & Sell Hype)
+           🔥 Market Sentiment Hub (Reddit Hype)
         </h2>
       </div>
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {trendingPlayers.map(p => {
-          const isDropped = p.reason.includes('DROPPED');
-          return (
-          <div key={p.id} className={`border ${isDropped ? 'border-red-900/50 bg-red-950/20 hover:border-red-500/50' : 'border-slate-800 bg-slate-900/50 hover:border-amber-500/50'} p-3 flex flex-col gap-2 transition-colors`}>
-            <div className={`flex justify-between items-center border-b ${isDropped ? 'border-red-900/50' : 'border-slate-800'} pb-2`}>
-              <span className={`font-bold text-sm ${isDropped ? 'text-red-400' : 'text-white'}`}>{p.name}</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${isDropped ? 'bg-red-500/20 text-red-500 border-red-500/50' : 'bg-amber-500/20 text-amber-500 border-amber-500/50'}`}>
+        {trendingPlayers.map(p => (
+          <div key={p.id} className="border border-slate-800 bg-slate-900/50 hover:border-amber-500/50 p-3 flex flex-col gap-2 transition-colors">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span className="font-bold text-white text-sm">{p.name}</span>
+              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-500 px-1.5 py-0.5 border border-amber-500/50">
                 HYPE: {p.hype_score}/10
               </span>
             </div>
-            <p className={`text-[11px] leading-relaxed italic ${isDropped ? 'text-red-400/80' : 'text-slate-400'}`}>
-              {p.reason.startsWith('Global Trend') ? (isDropped ? '📉 ' : '📈 ') : '💬 '}"{p.reason}"
+            <p className="text-[11px] text-slate-400 leading-relaxed italic">
+              💬 "{p.reason}"
             </p>
           </div>
-        )})}
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GlobalTransfersHub({ transfers }) {
+  if (!transfers || (!transfers.in.length && !transfers.out.length)) return null;
+  
+  return (
+    <div className="mt-8 border border-slate-800 bg-[#0E121C]">
+      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <h2 className="text-sm font-bold text-cyan-400 tracking-widest uppercase flex items-center gap-2">
+           🌍 Global Transfer Market
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+        
+        {/* Transfers IN */}
+        <div className="p-4">
+          <h3 className="text-[10px] text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+             📈 Most Transferred In (Buy)
+          </h3>
+          <div className="space-y-3">
+            {transfers.in.map(p => (
+              <div key={p.id} className="flex justify-between items-center border border-emerald-900/30 bg-emerald-950/10 p-2 rounded">
+                <div>
+                  <div className="font-bold text-slate-200 text-sm">{p.name}</div>
+                  <div className="text-[10px] text-slate-500">Ownership: {p.ownership}% | Proj: {p.ep_next}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-emerald-400 text-sm font-bold">+{p.transfers_in.toLocaleString()}</div>
+                  <div className="text-[9px] text-slate-400">({p.transfer_pct}% of world)</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Transfers OUT */}
+        <div className="p-4">
+          <h3 className="text-[10px] text-red-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+             📉 Most Transferred Out (Sell)
+          </h3>
+          <div className="space-y-3">
+            {transfers.out.map(p => (
+              <div key={p.id} className="flex justify-between items-center border border-red-900/30 bg-red-950/10 p-2 rounded">
+                <div>
+                  <div className="font-bold text-slate-200 text-sm">{p.name}</div>
+                  <div className="text-[10px] text-slate-500">Ownership: {p.ownership}% | Proj: {p.ep_next}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-red-400 text-sm font-bold">-{p.transfers_out.toLocaleString()}</div>
+                  <div className="text-[9px] text-slate-400">({p.transfer_pct}% of world)</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   );

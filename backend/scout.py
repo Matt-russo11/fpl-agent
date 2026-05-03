@@ -235,45 +235,47 @@ def analyze_team(manager_id):
         pass
 
     trending = get_trending_players({t['id']: t for t in elements_list})
-    
-    # Merge Global Transfer Data
-    total_managers = bootstrap.get('total_players', 10000000)
-    top_transfers = sorted(elements_list, key=lambda x: x.get('transfers_in_event', 0), reverse=True)[:5]
-    for t in top_transfers:
-        if not any(p['id'] == t['id'] for p in trending):
-            transfers_in = t.get('transfers_in_event', 0)
-            transfer_pct = (transfers_in / total_managers) * 100
-            ownership = t.get('selected_by_percent', '0.0')
-            ep_next = t.get('ep_next', '0.0')
-            
-            reason = f"Global Trend: {transfers_in:,} managers ({transfer_pct:.2f}% of world) bought them this week. Currently at {ownership}% total ownership with {ep_next} projected points."
-            
-            trending.append({
-                'id': t['id'],
-                'name': t['web_name'],
-                'reason': reason,
-                'hype_score': 8 # Default high hype score for mass transfers
-            })
-            
-    # Merge Global Transfers Out Data
-    top_transfers_out = sorted(elements_list, key=lambda x: x.get('transfers_out_event', 0), reverse=True)[:5]
-    for t in top_transfers_out:
-        if not any(p['id'] == t['id'] for p in trending):
-            transfers_out = t.get('transfers_out_event', 0)
-            transfer_pct = (transfers_out / total_managers) * 100
-            ownership = t.get('selected_by_percent', '0.0')
-            ep_next = t.get('ep_next', '0.0')
-            
-            reason = f"Global Trend: {transfers_out:,} managers ({transfer_pct:.2f}% of world) DROPPED them this week. Currently at {ownership}% total ownership with {ep_next} projected points."
-            
-            trending.append({
-                'id': t['id'],
-                'name': t['web_name'],
-                'reason': reason,
-                'hype_score': 2 # Low hype score for dropped players
-            })
-            
     trending_dict = {t['id']: t for t in trending}
+    
+    # Global Transfer Data (Separated from Reddit Hype)
+    global_transfers = {'in': [], 'out': []}
+    
+    try:
+        total_managers = int(bootstrap.get('total_players', 10000000))
+    except (ValueError, TypeError):
+        total_managers = 10000000
+
+    top_transfers_in = sorted(elements_list, key=lambda x: int(x.get('transfers_in_event', 0) or 0), reverse=True)[:5]
+    for t in top_transfers_in:
+        transfers_in = int(t.get('transfers_in_event', 0) or 0)
+        transfer_pct = (transfers_in / total_managers) * 100
+        ownership = t.get('selected_by_percent', '0.0')
+        ep_next = t.get('ep_next', '0.0')
+        
+        global_transfers['in'].append({
+            'id': t['id'],
+            'name': t['web_name'],
+            'transfers_in': transfers_in,
+            'transfer_pct': round(transfer_pct, 2),
+            'ownership': ownership,
+            'ep_next': ep_next
+        })
+
+    top_transfers_out = sorted(elements_list, key=lambda x: int(x.get('transfers_out_event', 0) or 0), reverse=True)[:5]
+    for t in top_transfers_out:
+        transfers_out = int(t.get('transfers_out_event', 0) or 0)
+        transfer_pct = (transfers_out / total_managers) * 100
+        ownership = t.get('selected_by_percent', '0.0')
+        ep_next = t.get('ep_next', '0.0')
+        
+        global_transfers['out'].append({
+            'id': t['id'],
+            'name': t['web_name'],
+            'transfers_out': transfers_out,
+            'transfer_pct': round(transfer_pct, 2),
+            'ownership': ownership,
+            'ep_next': ep_next
+        })
     
     used_chips = [c['name'] for c in chips_data]
     available_chips = []
@@ -447,7 +449,8 @@ def analyze_team(manager_id):
         "optimal_lineup": optimized_squad,
         "league_intel": intel,
         "season_timeline": season_timeline,
-        "trending_players": trending
+        "trending_players": trending,
+        "global_transfers": global_transfers
     }
 
 if __name__ == "__main__":
