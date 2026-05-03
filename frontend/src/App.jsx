@@ -52,7 +52,7 @@ function App() {
       <div className="min-h-screen bg-[#0A0D14] flex flex-col items-center justify-center text-slate-300 font-mono p-4 selection:bg-emerald-500/30">
         <div className="max-w-md w-full space-y-8 animate-fade-in-up">
           <div className="text-center border-b border-slate-800 pb-8">
-            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">FPL_AGENT<span className="text-emerald-500">_TERMINAL</span></h1>
+            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">FPL AI <span className="text-emerald-500">Agent</span></h1>
             <p className="text-slate-500 text-sm">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
           </div>
 
@@ -113,7 +113,7 @@ function App() {
         <header className="border-b border-slate-800 pb-6 mb-8 flex flex-col lg:flex-row justify-between items-end gap-6">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight cursor-pointer" onClick={() => setScoutData(null)}>
-              FPL_AGENT_TERMINAL
+              FPL AI Agent
             </h1>
             <p className="text-slate-500 text-sm mt-1 mb-4">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
             
@@ -253,6 +253,9 @@ function App() {
 
             {/* League Intel Bottom Hub */}
             <LeagueIntel intel={scoutData.league_intel} />
+
+            {/* Season Timeline Matrix */}
+            <SeasonTimeline timeline={scoutData.season_timeline} targetGw={scoutData.target_gw} />
 
           </div>
         )}
@@ -537,6 +540,95 @@ function StatList({ title, data }) {
             <span className="text-cyan-400 font-mono text-xs">{p.val}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function SeasonTimeline({ timeline, targetGw }) {
+  if (!timeline) return null;
+  
+  const teams = Object.keys(timeline).sort();
+  const gameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
+  
+  // Create a ref for horizontal scrolling to the target gameweek
+  const scrollRef = useRef(null);
+  
+  useEffect(() => {
+    if (scrollRef.current && targetGw) {
+      // Approximate scroll position (each column is roughly 80px wide)
+      const scrollPos = (targetGw - 3) * 80;
+      scrollRef.current.scrollLeft = Math.max(0, scrollPos);
+    }
+  }, [targetGw, timeline]);
+
+  return (
+    <div className="mt-12 border border-slate-800 bg-[#0E121C]">
+      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <h2 className="text-sm font-bold text-white tracking-widest uppercase flex items-center gap-2">
+           <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+           Season Fixture Matrix
+        </h2>
+        <div className="flex gap-4 text-[10px] font-bold tracking-widest uppercase">
+           <div className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-500/20 border border-amber-500"></span> Double GW</div>
+           <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500/20 border border-red-500"></span> Blank GW</div>
+        </div>
+      </div>
+      
+      <div 
+        ref={scrollRef}
+        className="overflow-x-auto custom-scrollbar"
+        style={{ scrollBehavior: 'smooth' }}
+      >
+        <table className="w-full text-left border-collapse min-w-max">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-20 bg-[#0E121C] p-3 border-b border-r border-slate-800 text-[10px] text-slate-500 uppercase font-bold tracking-wider w-24 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">Team</th>
+              {gameweeks.map(gw => (
+                <th key={gw} className={`p-2 border-b border-r border-slate-800/50 text-center text-[10px] uppercase font-bold tracking-wider min-w-[80px] ${gw === targetGw ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'text-slate-500'}`}>
+                  GW{gw}
+                  {gw === targetGw && <span className="block text-[8px] mt-0.5">NEXT</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {teams.map(team => (
+              <tr key={team} className="hover:bg-slate-800/20 transition-colors">
+                <td className="sticky left-0 z-10 bg-[#0E121C] p-3 border-b border-r border-slate-800 font-bold text-slate-300 text-xs shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  {team}
+                </td>
+                {gameweeks.map(gw => {
+                  const fixtures = timeline[team][gw] || [];
+                  const isBlank = fixtures.length === 0;
+                  const isDouble = fixtures.length > 1;
+                  const isTarget = gw === targetGw;
+                  
+                  let cellClass = "p-2 border-b border-r border-slate-800/50 text-center text-[9px] relative ";
+                  if (isBlank) cellClass += "bg-red-500/10 text-red-400/80 ";
+                  else if (isDouble) cellClass += "bg-amber-500/10 text-amber-400 ";
+                  else if (isTarget) cellClass += "bg-emerald-500/5 text-slate-300 ";
+                  else cellClass += "text-slate-400 ";
+                  
+                  return (
+                    <td key={`${team}-${gw}`} className={cellClass}>
+                      {isBlank && <span className="font-bold opacity-50">BLANK</span>}
+                      {!isBlank && (
+                        <div className="flex flex-col gap-1">
+                          {fixtures.map((fix, i) => (
+                            <span key={i} className={`block ${isDouble ? 'border-b border-amber-500/20 pb-0.5 last:border-0 last:pb-0' : ''}`}>
+                              {fix.replace('vs ', '').replace(' (H)', '(H)').replace(' (A)', '(A)')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
