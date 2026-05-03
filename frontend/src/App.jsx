@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import './App.css';
 
 function App() {
@@ -33,11 +33,6 @@ function App() {
     }
   }, []);
 
-  // Initial fetch (will use backend ENV fallback if no ID provided)
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   const handleSearch = (e) => {
     e.preventDefault();
     if (managerIdInput.trim()) {
@@ -45,12 +40,77 @@ function App() {
     }
   };
 
+  const loadAdminTeam = () => {
+    fetchData(null);
+  };
+
+  // If no data and not loading, show the Landing Screen
+  if (!scoutData && !loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0D14] flex flex-col items-center justify-center text-slate-300 font-mono p-4 selection:bg-emerald-500/30">
+        <div className="max-w-md w-full space-y-8 animate-fade-in-up">
+          <div className="text-center border-b border-slate-800 pb-8">
+            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">FPL_AGENT<span className="text-emerald-500">_TERMINAL</span></h1>
+            <p className="text-slate-500 text-sm">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
+          </div>
+
+          {error && (
+            <div className="border-l-2 border-red-500 bg-red-500/10 p-4">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div className="bg-[#0E121C] border border-slate-800 p-6 space-y-6">
+            <div>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-3">Initialize Protocol</label>
+              <form onSubmit={handleSearch} className="space-y-3">
+                <input 
+                  type="text" 
+                  placeholder="Enter FPL Manager ID..."
+                  value={managerIdInput}
+                  onChange={(e) => setManagerIdInput(e.target.value)}
+                  className="w-full bg-[#0A0D14] border border-slate-700 text-slate-200 text-sm px-4 py-3 focus:outline-none focus:border-emerald-500 transition-colors"
+                  required
+                />
+                <button 
+                  type="submit"
+                  className="w-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/20 px-4 py-3 text-sm font-bold uppercase tracking-widest transition-colors"
+                >
+                  Analyze Squad
+                </button>
+              </form>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-800"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-[#0E121C] px-2 text-slate-600 uppercase tracking-widest">Or</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={loadAdminTeam}
+              className="w-full bg-transparent text-slate-400 border border-slate-700 hover:border-slate-500 hover:text-slate-300 px-4 py-3 text-sm font-bold uppercase tracking-widest transition-colors"
+            >
+              View Admin Demo
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Once data is loading or loaded, show the main dashboard
   return (
     <div className="min-h-screen bg-[#0A0D14] text-slate-300 font-mono p-4 md:p-8 selection:bg-emerald-500/30">
       <div className="max-w-7xl mx-auto space-y-8">
         <header className="border-b border-slate-800 pb-6 mb-8 flex flex-col lg:flex-row justify-between items-end gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">FPL_AGENT_TERMINAL</h1>
+            <h1 className="text-3xl font-bold text-white tracking-tight cursor-pointer" onClick={() => setScoutData(null)}>
+              FPL_AGENT_TERMINAL
+            </h1>
             <p className="text-slate-500 text-sm mt-1 mb-4">ADVANCED ANALYTICS & STRATEGY PROTOCOL</p>
             
             <form onSubmit={handleSearch} className="flex gap-2">
