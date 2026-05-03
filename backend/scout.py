@@ -219,12 +219,35 @@ def analyze_team(manager_id):
     try:
         team_picks_data = get_data(f"{FPL_BASE_URL}/entry/{manager_id}/event/{current_gw}/picks/")
         history_data = get_data(f"{FPL_BASE_URL}/entry/{manager_id}/history/")
+        chips_data = history_data.get("chips", [])
+        bank = history_data['current'][-1]['bank']
     except Exception as e:
-        return {"error": f"Error fetching team data: {e}"}
+        return {"error": f"Error fetching manager data: {e}"}
 
-    bank = team_picks_data.get('entry_history', {}).get('bank', 0)
+    # Season Over Detection
+    is_season_over = False
+    try:
+        gw_38 = next((e for e in bootstrap.get('events', []) if e['id'] == 38), None)
+        if gw_38 and gw_38.get('finished'):
+            is_season_over = True
+    except:
+        pass
+
+    trending = get_trending_players({t['id']: t for t in elements_list})
     
-    used_chips = [c['name'] for c in history_data.get('chips', [])]
+    # Merge Global Transfer Data
+    top_transfers = sorted(elements_list, key=lambda x: x.get('transfers_in_event', 0), reverse=True)[:5]
+    for t in top_transfers:
+        if not any(p['id'] == t['id'] for p in trending):
+            trending.append({
+                'id': t['id'],
+                'name': t['web_name'],
+                'reason': f"Global Trend: Over {t.get('transfers_in_event', 0):,} managers transferred them in this week.",
+                'hype_score': 8 # Default high hype score for mass transfers
+            })
+            
+    trending_dict = {t['id']: t for t in trending}
+    used_chips = [c['name'] for c in chips_data]
     available_chips = []
     if '3xc' not in used_chips: available_chips.append('Triple Captain')
     if 'bboost' not in used_chips: available_chips.append('Bench Boost')
@@ -390,6 +413,7 @@ def analyze_team(manager_id):
     return {
         "manager_id": manager_id,
         "target_gw": next_gw,
+        "is_season_over": is_season_over,
         "bank": bank / 10,
         "available_chips": available_chips,
         "chip_strategy": chip_strategy,

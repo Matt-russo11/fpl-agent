@@ -167,6 +167,15 @@ function App() {
 
         {scoutData && !loading && (
           <div className="space-y-8 animate-fade-in-up">
+            {scoutData.is_season_over && (
+              <div className="bg-amber-500/10 border border-amber-500/50 p-6 rounded text-center col-span-1 xl:col-span-3 mb-4">
+                <h2 className="text-2xl font-bold text-amber-500 mb-2 uppercase tracking-widest">🏆 Season Completed / Pre-Season Mode Active</h2>
+                <p className="text-amber-400/80 text-sm max-w-3xl mx-auto">
+                  The Premier League season has officially concluded. The AI Agent is now running in Pre-Season Scouting Mode, analyzing Reddit rumors and final global transfer trends to help you build your watchlist for next season. This dashboard will automatically reset with brand new players, prices, and fixtures the moment the official FPL game launches for the new season in August!
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               
               {/* Team Layout (Left) */}
@@ -576,7 +585,7 @@ function TrendingHub({ trendingPlayers }) {
     <div className="mt-8 border border-slate-800 bg-[#0E121C]">
       <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
         <h2 className="text-sm font-bold text-amber-500 tracking-widest uppercase flex items-center gap-2">
-           🔥 Global Market Sentiment (r/soccer & r/FantasyPL)
+           🔥 Hyped up Players to Buy (Global & Social Data)
         </h2>
       </div>
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -588,7 +597,9 @@ function TrendingHub({ trendingPlayers }) {
                 HYPE: {p.hype_score}/10
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed italic">"{p.reason}"</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed italic">
+              {p.reason.startsWith('Global Trend') ? '📈 ' : '💬 '}"{p.reason}"
+            </p>
           </div>
         ))}
       </div>
