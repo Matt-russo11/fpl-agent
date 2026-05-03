@@ -436,6 +436,32 @@ def analyze_team(manager_id):
     action_plans.sort(key=lambda x: x['net_ep_gain'], reverse=True)
     
     intel = get_league_intel(elements_list, bootstrap['teams'])
+    
+    scout_shortlist = {'GK': [], 'DEF': [], 'MID': [], 'FWD': []}
+    pos_map = {1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD'}
+    fit_players = [p for p in elements_list if is_fit(p)]
+    
+    for p in fit_players:
+        try:
+            form = float(p.get('form', 0) or 0)
+            ep_next = float(p.get('ep_next', 0) or 0)
+        except (ValueError, TypeError):
+            form, ep_next = 0.0, 0.0
+        p['custom_score'] = form + ep_next
+
+    for pos_num, pos_name in pos_map.items():
+        pos_players = [p for p in fit_players if p['element_type'] == pos_num]
+        pos_players.sort(key=lambda x: x.get('custom_score', 0), reverse=True)
+        limit = 5 if pos_num in [1, 4] else 10
+        scout_shortlist[pos_name] = [{
+            'id': p['id'],
+            'name': p['web_name'],
+            'team': team_dict_short[p['team']],
+            'cost': p['now_cost'] / 10,
+            'form': p.get('form', '0.0'),
+            'ep_next': p.get('ep_next', '0.0'),
+            'score': round(p.get('custom_score', 0), 1)
+        } for p in pos_players[:limit]]
 
     return {
         "manager_id": manager_id,
@@ -450,7 +476,8 @@ def analyze_team(manager_id):
         "league_intel": intel,
         "season_timeline": season_timeline,
         "trending_players": trending,
-        "global_transfers": global_transfers
+        "global_transfers": global_transfers,
+        "scout_shortlist": scout_shortlist
     }
 
 if __name__ == "__main__":

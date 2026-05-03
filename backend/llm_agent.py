@@ -67,6 +67,17 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
         market_context += f"Top G+A: {', '.join(goals_assists)}\n"
         market_context += f"Top ICT Index: {', '.join(ict)}\n"
         market_context += f"Major Injuries: {', '.join(injuries)}\n"
+        
+    # Format the Dynamic Scout Shortlist
+    shortlist_data = scout_data.get('scout_shortlist', {})
+    shortlist_context = "Dynamic Scout Shortlist (Top Fit Players by Form + Fixtures):\n"
+    if shortlist_data:
+        for pos, players in shortlist_data.items():
+            shortlist_context += f"{pos}:\n"
+            for p in players:
+                shortlist_context += f"- {p['name']} ({p['team']}) - £{p['cost']}m | Form: {p['form']} | Proj: {p['ep_next']} | Score: {p['score']}\n"
+    else:
+        shortlist_context += "No shortlist available.\n"
     
     system_prompt = f"""
     You are an expert, brutally honest Premier League Fantasy Football (FPL) Assistant.
@@ -85,6 +96,8 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     
     {market_context}
     
+    {shortlist_context}
+    
     {fixture_context}
     
     FPL CHIP DEFINITIONS (STRICT RULES):
@@ -96,13 +109,14 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     CRITICAL BEHAVIOR GUIDELINES:
     1. NEVER hallucinate facts. Use the exact names, teams, positions, and costs provided above.
     2. NEVER hallucinate fixtures or guess which teams are playing. STRICTLY use the 'Upcoming Fixtures' data block. If a player's fixture is not listed in the data block, do NOT mention it.
-    3. STRICT POSITION RULE: FPL requires transferring a player for a player of the SAME POSITION. You MUST NEVER suggest transferring a DEF for a MID or FWD. Only recommend valid 1-for-1 positional swaps.
-    4. MAX 3 PLAYERS PER TEAM RULE: In FPL, a manager can have a MAXIMUM of 3 players from the same Premier League team. Before recommending a player to buy, you MUST check the Current Squad provided above to ensure buying that player will not exceed the 3-player limit for that team.
-    5. If asked an unanswerable question, reply exactly: "Sorry, I cannot answer that accurately right now."
-    6. Be highly critical. If the user suggests a bad transfer, explicitly tell them. Use the Market Intel to suggest superior targets.
-    7. STRICT TRANSFER MATH RULE: If you recommend a transfer, you MUST recommend a valid 1-for-1 or 2-for-2 swap. You MUST ensure the cost of the players being bought is less than or equal to the (cost of players sold + Current Bank Balance). Never recommend selling 3 and buying 2.
-    8. DELIVERABLES: Always end your response with a clear, actionable insight block. Example: "ACTION: Sell [Player] and Buy [Player]."
-    7. Answer concisely. Use markdown for bolding player names.
+    3. SCOUT SHORTLIST STRICT RULE: When recommending alternative transfers to buy, YOU MUST ONLY select players from the 'Dynamic Scout Shortlist' provided above. NEVER invent, guess, or pull players from your memory. The shortlist is pre-filtered dynamically for elite form and favorable fixtures based on today's data. If you cannot find a suitable player in the shortlist, state that you cannot find one.
+    4. STRICT POSITION RULE: FPL requires transferring a player for a player of the SAME POSITION. You MUST NEVER suggest transferring a DEF for a MID or FWD. Only recommend valid 1-for-1 positional swaps.
+    5. MAX 3 PLAYERS PER TEAM RULE: In FPL, a manager can have a MAXIMUM of 3 players from the same Premier League team. Before recommending a player to buy, you MUST check the Current Squad provided above to ensure buying that player will not exceed the 3-player limit for that team.
+    6. If asked an unanswerable question, reply exactly: "Sorry, I cannot answer that accurately right now."
+    7. Be highly critical. If the user suggests a bad transfer, explicitly tell them. Use the Market Intel to suggest superior targets.
+    8. STRICT TRANSFER MATH RULE: If you recommend a transfer, you MUST recommend a valid 1-for-1 or 2-for-2 swap. You MUST ensure the cost of the players being bought is less than or equal to the (cost of players sold + Current Bank Balance). Never recommend selling 3 and buying 2.
+    9. DELIVERABLES: Always end your response with a clear, actionable insight block. Example: "ACTION: Sell [Player] and Buy [Player]."
+    10. Answer concisely. Use markdown for bolding player names.
     """
     
     # Build message history
