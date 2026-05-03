@@ -12,17 +12,18 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     llm = ChatGroq(
         groq_api_key=api_key,
         model_name="llama-3.1-8b-instant", 
-        temperature=0.7
+        temperature=0.7,
+        max_tokens=800
     )
     
     # Extract key data for the system prompt to keep it concise but informative
     target_gw = scout_data.get('target_gw', 'Unknown')
     bank = scout_data.get('bank', 0)
     
-    # Format the current starting lineup with exact team names to prevent hallucinations
+    # Format the current starting lineup with exact team names, costs, and EP to prevent hallucinations
     current_lineup = scout_data.get('current_lineup', [])
-    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()})" for p in current_lineup if p.get('status') == 'Starting']
-    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')})" for p in current_lineup if p.get('status') == 'Bench']
+    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)}" for p in current_lineup if p.get('status') == 'Starting']
+    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)}" for p in current_lineup if p.get('status') == 'Bench']
     
     # Format the AI action plans
     plans = scout_data.get('action_plans', [])
@@ -52,27 +53,43 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
         except Exception:
             fixture_context = "Fixture data unavailable."
     
+    # Format the Market Intel
+    intel = scout_data.get('league_intel', {})
+    market_context = "Global Market Intel (Top Performers & Injuries):\n"
+    if intel:
+        leaders = intel.get('leaders', {})
+        goals_assists = [f"{p['name']} ({p['val']})" for p in leaders.get('goals_assists', [])]
+        ict = [f"{p['name']} ({p['val']})" for p in leaders.get('ict_index', [])]
+        injuries = [f"{p['name']} ({p['status']})" for p in intel.get('injury_ward', [])[:5]]
+        market_context += f"Top G+A: {', '.join(goals_assists)}\n"
+        market_context += f"Top ICT Index: {', '.join(ict)}\n"
+        market_context += f"Major Injuries: {', '.join(injuries)}\n"
+    
     system_prompt = f"""
     You are an expert, brutally honest Premier League Fantasy Football (FPL) Assistant.
     You are helping a manager optimize their team for Gameweek {target_gw}.
     
     Current Bank Balance: £{bank}m
     
-    Current Starting XI: {", ".join(starters)}
-    Current Bench: {", ".join(bench)}
+    Current Squad (Name (Team) - Cost - Expected Points):
+    Starting XI: {", ".join(starters)}
+    Bench: {", ".join(bench)}
     
     Algorithm Suggested Transfer Plans:
     {plan_context}
     
+    {market_context}
+    
     {fixture_context}
     
     CRITICAL BEHAVIOR GUIDELINES:
-    1. NEVER hallucinate real-world facts. Use the exact team names provided in the starting XI array above.
-    2. NEVER hallucinate fixtures. STRICTLY use the 'Upcoming Fixtures' data block above to answer any questions about schedules, Blank Gameweeks, or Double Gameweeks. If a gameweek says "BLANK", the team does not play.
-    3. If the user asks a question that you cannot answer accurately using the provided data blocks, you MUST reply with exactly: "Sorry, I cannot answer that accurately right now." Do not attempt to guess or use outside knowledge.
-    4. Be highly critical and opinionated. DO NOT act like a "yes-man". If the user suggests a transfer that contradicts the mathematical Algorithm Plans, explicitly tell them it is a bad idea.
-    5. Make decisive, specific recommendations (e.g., "Sell X, Buy Y"). Avoid vague advice.
-    6. Answer concisely (2-4 sentences max). Use markdown for bolding player names.
+    1. NEVER hallucinate facts. Use the exact names, teams, and costs provided above.
+    2. NEVER hallucinate fixtures. STRICTLY use the 'Upcoming Fixtures' data block.
+    3. If asked an unanswerable question, reply exactly: "Sorry, I cannot answer that accurately right now."
+    4. Be highly critical. If the user suggests a bad transfer, explicitly tell them. Use the Market Intel to suggest superior targets.
+    5. STRICT TRANSFER MATH RULE: If you recommend a transfer, you MUST recommend a valid 1-for-1 or 2-for-2 swap. You MUST ensure the cost of the players being bought is less than or equal to the (cost of players sold + Current Bank Balance). Never recommend selling 3 and buying 2.
+    6. DELIVERABLES: Always end your response with a clear, actionable insight block. Example: "ACTION: Sell [Player] and Buy [Player]."
+    7. Answer concisely. Use markdown for bolding player names.
     """
     
     # Build message history
