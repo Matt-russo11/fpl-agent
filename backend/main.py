@@ -15,7 +15,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "https://fpl-manager.netlify.app/",
+    "https://fpl-manager.netlify.app",
 ]
 
 app.add_middleware(
