@@ -207,9 +207,10 @@ function App() {
                       {viewMode === 'optimized' && <span className="text-[10px] text-emerald-500 font-bold tracking-widest bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20">AUTO-CAPTAIN ENABLED</span>}
                     </div>
                     <div className="space-y-1">
-                      {activeLineup.filter(p => p.status === 'Starting').map((player, idx) => (
-                        <PlayerRow key={idx} player={player} />
-                      ))}
+                      {activeLineup.filter(p => p.status === 'Starting').map((player, idx) => {
+                        const trendReason = (scoutData.trending_players || []).find(t => t.id === player.id)?.reason;
+                        return <PlayerRow key={idx} player={player} trendingReason={trendReason} />;
+                      })}
                     </div>
                   </div>
 
@@ -219,9 +220,10 @@ function App() {
                       {viewMode === 'optimized' && <span className="text-[10px] text-slate-500 font-bold tracking-widest">ORDERED BY EP</span>}
                     </div>
                     <div className="space-y-1">
-                      {activeLineup.filter(p => p.status === 'Bench').map((player, idx) => (
-                        <PlayerRow key={idx} player={player} isBench benchOrder={idx + 1} />
-                      ))}
+                      {activeLineup.filter(p => p.status === 'Bench').map((player, idx) => {
+                        const trendReason = (scoutData.trending_players || []).find(t => t.id === player.id)?.reason;
+                        return <PlayerRow key={idx} player={player} isBench benchOrder={idx + 1} trendingReason={trendReason} />;
+                      })}
                     </div>
                   </div>
                 </div>
@@ -241,7 +243,7 @@ function App() {
                 
                 <div className="space-y-4">
                   {scoutData.action_plans.map((plan, idx) => (
-                    <ActionPlanCard key={idx} plan={plan} idx={idx} />
+                    <ActionPlanCard key={idx} plan={plan} idx={idx} trendingPlayers={scoutData.trending_players || []} playerMap={scoutData.optimal_lineup.concat(scoutData.current_lineup)} />
                   ))}
                   {scoutData.action_plans.length === 0 && (
                      <p className="text-sm text-slate-500 italic">No favorable transfers found.</p>
@@ -253,6 +255,9 @@ function App() {
 
             {/* League Intel Bottom Hub */}
             <LeagueIntel intel={scoutData.league_intel} />
+
+            {/* Trending Players Hub */}
+            <TrendingHub trendingPlayers={scoutData.trending_players || []} />
 
             {/* Season Timeline Matrix */}
             <SeasonTimeline timeline={scoutData.season_timeline} targetGw={scoutData.target_gw} />
@@ -382,7 +387,7 @@ function AIChatWidget({ scoutData }) {
   );
 }
 
-function PlayerRow({ player, isBench, benchOrder }) {
+function PlayerRow({ player, isBench, benchOrder, trendingReason }) {
   return (
     <div className={`flex justify-between items-center py-2 px-3 border-l-2 ${isBench ? 'border-slate-700 bg-slate-900/30' : 'border-emerald-500/50 hover:bg-slate-800/50'} transition-colors`}>
       <div className="flex items-center gap-3">
@@ -399,6 +404,9 @@ function PlayerRow({ player, isBench, benchOrder }) {
                 {player.role_display === '(C)' ? 'CAP' : 'VC'}
               </span>
             )}
+            {trendingReason && (
+              <span className="text-[10px] cursor-help" title={`Trending on Reddit: ${trendingReason}`}>🔥</span>
+            )}
           </span>
           <div className="flex items-center gap-2 mt-0.5">
              <span className="text-[9px] text-slate-500 tracking-wider font-mono">{player.fixture_display}</span>
@@ -410,17 +418,18 @@ function PlayerRow({ player, isBench, benchOrder }) {
           </div>
         </div>
       </div>
-      <div className="text-right flex items-center gap-3">
-         <span className="text-[10px] text-slate-600 uppercase">EP {player.ep_next}</span>
-         {player.role_display === '(C)' && (
-           <span className="text-[10px] text-emerald-400 font-bold border border-emerald-500/30 px-1 py-0.5">{(player.ep_next * 2).toFixed(1)}</span>
-         )}
+      <div className="text-right flex flex-col items-end gap-1">
+        <span className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+          {player.social_ep > player.ep_next && <span className="text-[9px] bg-amber-500/20 text-amber-500 px-1 border border-amber-500/50">SOCIAL EP</span>}
+          {player.social_ep > player.ep_next ? player.social_ep.toFixed(1) : player.ep_next.toFixed(1)}
+        </span>
+        <span className="text-[10px] text-slate-500 font-mono">£{(player.now_cost / 10).toFixed(1)}m</span>
       </div>
     </div>
   );
 }
 
-function ActionPlanCard({ plan, idx }) {
+function ActionPlanCard({ plan, idx, trendingPlayers }) {
   return (
     <div className="border border-slate-800 bg-[#0E121C] group hover:border-slate-600 transition-colors">
       <div className="bg-slate-900 px-4 py-2 flex justify-between items-center border-b border-slate-800">
@@ -443,9 +452,17 @@ function ActionPlanCard({ plan, idx }) {
           <div className="space-y-2">
             <span className="text-[10px] text-emerald-400 uppercase tracking-widest">Buy</span>
             <div className="space-y-1">
-              {plan.buy.map(p => (
-                <div key={p} className="text-sm text-white font-semibold border-l border-emerald-500/50 pl-2 py-0.5">{p}</div>
-              ))}
+              {plan.buy.map(p => {
+                const isTrending = trendingPlayers.find(t => t.name === p);
+                return (
+                  <div key={p} className="text-sm text-white font-semibold border-l border-emerald-500/50 pl-2 py-0.5 flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1">
+                      {p}
+                      {isTrending && <span className="text-[10px] cursor-help" title={`Trending on Reddit: ${isTrending.reason}`}>🔥</span>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -538,6 +555,32 @@ function StatList({ title, data }) {
           <div key={i} className="flex justify-between items-center group">
             <span className="text-slate-400 group-hover:text-slate-200 transition-colors truncate max-w-[100px]">{p.name}</span>
             <span className="text-cyan-400 font-mono text-xs">{p.val}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrendingHub({ trendingPlayers }) {
+  if (!trendingPlayers || trendingPlayers.length === 0) return null;
+  return (
+    <div className="mt-8 border border-slate-800 bg-[#0E121C]">
+      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <h2 className="text-sm font-bold text-amber-500 tracking-widest uppercase flex items-center gap-2">
+           🔥 Global Market Sentiment (r/soccer & r/FantasyPL)
+        </h2>
+      </div>
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {trendingPlayers.map(p => (
+          <div key={p.id} className="border border-slate-800 bg-slate-900/50 p-3 flex flex-col gap-2 hover:border-amber-500/50 transition-colors">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span className="font-bold text-white text-sm">{p.name}</span>
+              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-500 px-1.5 py-0.5 border border-amber-500/50">
+                HYPE: {p.hype_score}/10
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed italic">"{p.reason}"</p>
           </div>
         ))}
       </div>

@@ -2,6 +2,7 @@ import os
 import requests
 import json
 from dotenv import load_dotenv
+from sentiment import get_trending_players
 
 load_dotenv()
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
@@ -230,26 +231,30 @@ def analyze_team(manager_id):
     if 'freehit' not in used_chips: available_chips.append('Free Hit')
     if used_chips.count('wildcard') < 2: available_chips.append('Wildcard')
 
-    my_players = []
-    current_lineup_raw = []
-    
-    for pick in team_picks_data.get('picks', []):
-        pid = pick['element']
-        player = elements[pid]
-        ep_next = float(player.get('ep_next', 0) or 0)
-        
-        # Determine current status based on position
-        is_starting = pick['position'] <= 11
-        role = ""
-        if pick['is_captain']: role = "(C)"
-        elif pick['is_vice_captain']: role = "(VC)"
-        
-        player_dict = {
+    trending = get_trending_players({t['id']: t for t in elements_list})
+    trending_dict = {t['id']: t for t in trending}
+
+    player_dict = {}
+    for player in elements_list:
+        pid = player['id']
+        try:
+            ep_next = float(player['ep_next'])
+        except ValueError:
+            ep_next = 0.0
+            
+        # Social EP calculation
+        social_ep = ep_next
+        if pid in trending_dict:
+            hype_score = trending_dict[pid].get('hype_score', 5)
+            social_ep = round(ep_next + (hype_score * 0.4), 1)
+
+        player_dict[pid] = {
             'id': pid,
             'name': player['web_name'],
             'element_type': player['element_type'],
             'now_cost': player['now_cost'],
             'ep_next': ep_next,
+            'social_ep': social_ep,
             'team_id': player['team'],
             'team_name': team_dict_short[player['team']],
             'is_captain': False,
@@ -259,10 +264,25 @@ def analyze_team(manager_id):
             'injury_warning': get_injury_warning(player),
             'fixture_display': team_next_fixture_display.get(player['team'], "Blank")
         }
-        my_players.append(player_dict.copy())
+
+    my_players = []
+    current_lineup_raw = []
+    
+    for pick in team_picks_data.get('picks', []):
+        pid = pick['element']
+        player_info = player_dict[pid]
+        
+        # Determine current status based on position
+        is_starting = pick['position'] <= 11
+        role = ""
+        if pick['is_captain']: role = "(C)"
+        elif pick['is_vice_captain']: role = "(VC)"
+        
+        player_info_copy = player_info.copy()
+        my_players.append(player_info_copy)
         
         # Build current lineup mapping
-        current_dict = player_dict.copy()
+        current_dict = player_info_copy.copy()
         current_dict['status'] = 'Starting' if is_starting else 'Bench'
         current_dict['is_captain'] = pick['is_captain']
         current_dict['is_vice_captain'] = pick['is_vice_captain']
@@ -303,8 +323,8 @@ def analyze_team(manager_id):
     for weak_player in worst_players[:1]:
         budget = weak_player['now_cost'] + bank
         valid_replacements = []
-        for pid, p in elements.items():
-            if not is_fit(p): continue
+        for pid, p in player_dict.items():
+            if not is_fit(elements[pid]): continue
             if p['element_type'] == weak_player['element_type'] and p['now_cost'] <= budget:
                 if any(mp['id'] == pid for mp in my_players): continue
                 ep = float(p.get('ep_next', 0) or 0)
@@ -314,12 +334,12 @@ def analyze_team(manager_id):
         if valid_replacements:
             best_repl, repl_ep = valid_replacements[0]
             reason = f"Single Transfer. Upgrade using £{bank/10:.1f}m from bank. Expected Points jump from {weak_player['ep_next']} to {repl_ep}."
-            if team_fixtures_next_gw.get(best_repl['team'], 0) > 1:
-                reason += f" {best_repl['web_name']} has a Double Gameweek!"
+            if team_fixtures_next_gw.get(best_repl['team_id'], 0) > 1:
+                reason += f" {best_repl['name']} has a Double Gameweek!"
             action_plans.append({
                 'type': 'Single Transfer',
                 'sell': [weak_player['name']],
-                'buy': [best_repl['web_name']],
+                'buy': [best_repl['name']],
                 'cost_diff': round((best_repl['now_cost'] - weak_player['now_cost'])/10, 1),
                 'explanation': reason,
                 'net_ep_gain': round(repl_ep - weak_player['ep_next'], 2)
@@ -329,8 +349,8 @@ def analyze_team(manager_id):
         wp1, wp2 = worst_players[0], worst_players[1]
         total_budget = wp1['now_cost'] + wp2['now_cost'] + bank
         cands1, cands2 = [], []
-        for pid, p in elements.items():
-            if not is_fit(p): continue
+        for pid, p in player_dict.items():
+            if not is_fit(elements[pid]): continue
             if any(mp['id'] == pid for mp in my_players): continue
             ep = float(p.get('ep_next', 0) or 0)
             if p['element_type'] == wp1['element_type']: cands1.append((p, ep))
@@ -353,7 +373,7 @@ def analyze_team(manager_id):
             action_plans.append({
                 'type': 'Double Transfer',
                 'sell': [wp1['name'], wp2['name']],
-                'buy': [r1['web_name'], r2['web_name']],
+                'buy': [r1['name'], r2['name']],
                 'cost_diff': round(((r1['now_cost'] + r2['now_cost']) - (wp1['now_cost'] + wp2['now_cost']))/10, 1),
                 'explanation': reason,
                 'net_ep_gain': round(best_pair_ep_gain, 2)
@@ -372,7 +392,8 @@ def analyze_team(manager_id):
         "current_lineup": current_lineup,
         "optimal_lineup": optimized_squad,
         "league_intel": intel,
-        "season_timeline": season_timeline
+        "season_timeline": season_timeline,
+        "trending_players": trending
     }
 
 if __name__ == "__main__":

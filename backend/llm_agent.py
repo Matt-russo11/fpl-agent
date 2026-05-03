@@ -20,10 +20,10 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     target_gw = scout_data.get('target_gw', 'Unknown')
     bank = scout_data.get('bank', 0)
     
-    # Format the current starting lineup with exact team names, costs, and EP to prevent hallucinations
+    # Format the current starting lineup with exact team names, costs, and Social EP
     current_lineup = scout_data.get('current_lineup', [])
-    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)}" for p in current_lineup if p.get('status') == 'Starting']
-    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - EP: {p.get('ep_next', 0)}" for p in current_lineup if p.get('status') == 'Bench']
+    starters = [f"{p['name']} ({p.get('team_name', 'Unknown')}, {p.get('role_display', '').strip()}) - £{p.get('now_cost', 0)/10}m - Social EP: {p.get('social_ep', p.get('ep_next', 0))}" for p in current_lineup if p.get('status') == 'Starting']
+    bench = [f"{p['name']} ({p.get('team_name', 'Unknown')}) - £{p.get('now_cost', 0)/10}m - Social EP: {p.get('social_ep', p.get('ep_next', 0))}" for p in current_lineup if p.get('status') == 'Bench']
     
     # Format the AI action plans
     plans = scout_data.get('action_plans', [])
@@ -81,6 +81,12 @@ def get_ai_response(message: str, scout_data: dict, history: list) -> str:
     {market_context}
     
     {fixture_context}
+    
+    FPL CHIP DEFINITIONS (STRICT RULES):
+    - Bench Boost: Adds the points of the 4 bench players to the total score. Only use if the bench players have excellent fixtures (e.g. Double Gameweeks). Do NOT suggest it just because starters have good fixtures.
+    - Triple Captain: Multiplies the captain's points by 3 instead of 2. Use on a premium player during a Double Gameweek.
+    - Free Hit: Replaces the entire squad for ONE gameweek only. Perfect for navigating massive Blank Gameweeks.
+    - Wildcard: Permanent unlimited transfers. Use when the squad is fundamentally broken long-term.
     
     CRITICAL BEHAVIOR GUIDELINES:
     1. NEVER hallucinate facts. Use the exact names, teams, and costs provided above.
