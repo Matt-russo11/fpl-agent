@@ -6,6 +6,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [managerIdInput, setManagerIdInput] = useState('');
+  const [viewMode, setViewMode] = useState('optimized'); // 'optimized' or 'current'
 
   const fetchData = useCallback(async (targetId = null) => {
     setLoading(true);
@@ -25,6 +26,7 @@ function App() {
       
       const scout = await scoutResponse.json();
       setScoutData(scout);
+      setViewMode('optimized'); // reset view mode on fresh fetch
     } catch (err) {
       setError(err.message);
       setScoutData(null);
@@ -102,6 +104,8 @@ function App() {
     );
   }
 
+  const activeLineup = scoutData ? (viewMode === 'optimized' ? scoutData.optimal_lineup : scoutData.current_lineup) : [];
+
   // Once data is loading or loaded, show the main dashboard
   return (
     <div className="min-h-screen bg-[#0A0D14] text-slate-300 font-mono p-4 md:p-8 selection:bg-emerald-500/30">
@@ -178,14 +182,32 @@ function App() {
                   </div>
                 </div>
 
+                {/* View Toggle */}
+                <div className="flex justify-center mb-2">
+                   <div className="inline-flex bg-[#0E121C] border border-slate-800 p-1">
+                      <button 
+                         onClick={() => setViewMode('current')}
+                         className={`px-6 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${viewMode === 'current' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                      >
+                         Current Lineup
+                      </button>
+                      <button 
+                         onClick={() => setViewMode('optimized')}
+                         className={`px-6 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${viewMode === 'optimized' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                      >
+                         Optimized Lineup
+                      </button>
+                   </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border border-slate-800 bg-[#0E121C] p-4">
                     <div className="flex justify-between items-end mb-4 border-b border-slate-800 pb-2">
-                      <h2 className="text-xs text-slate-500 uppercase tracking-widest">Optimized Starting XI</h2>
-                      <span className="text-[10px] text-emerald-500 font-bold tracking-widest bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20">AUTO-CAPTAIN ENABLED</span>
+                      <h2 className="text-xs text-slate-500 uppercase tracking-widest">{viewMode === 'optimized' ? 'Optimized Starting XI' : 'Current Starting XI'}</h2>
+                      {viewMode === 'optimized' && <span className="text-[10px] text-emerald-500 font-bold tracking-widest bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20">AUTO-CAPTAIN ENABLED</span>}
                     </div>
                     <div className="space-y-1">
-                      {scoutData.optimal_lineup.filter(p => p.status === 'Starting').map((player, idx) => (
+                      {activeLineup.filter(p => p.status === 'Starting').map((player, idx) => (
                         <PlayerRow key={idx} player={player} />
                       ))}
                     </div>
@@ -193,11 +215,11 @@ function App() {
 
                   <div className="border border-slate-800 bg-[#0E121C] p-4 h-fit">
                     <div className="flex justify-between items-end mb-4 border-b border-slate-800 pb-2">
-                      <h2 className="text-xs text-slate-500 uppercase tracking-widest">Optimized Bench</h2>
-                      <span className="text-[10px] text-slate-500 font-bold tracking-widest">ORDERED BY EP</span>
+                      <h2 className="text-xs text-slate-500 uppercase tracking-widest">{viewMode === 'optimized' ? 'Optimized Bench' : 'Current Bench'}</h2>
+                      {viewMode === 'optimized' && <span className="text-[10px] text-slate-500 font-bold tracking-widest">ORDERED BY EP</span>}
                     </div>
                     <div className="space-y-1">
-                      {scoutData.optimal_lineup.filter(p => p.status === 'Bench').map((player, idx) => (
+                      {activeLineup.filter(p => p.status === 'Bench').map((player, idx) => (
                         <PlayerRow key={idx} player={player} isBench benchOrder={idx + 1} />
                       ))}
                     </div>

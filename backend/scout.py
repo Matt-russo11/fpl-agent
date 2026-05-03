@@ -199,11 +199,20 @@ def analyze_team(manager_id):
     if used_chips.count('wildcard') < 2: available_chips.append('Wildcard')
 
     my_players = []
+    current_lineup_raw = []
+    
     for pick in team_picks_data.get('picks', []):
         pid = pick['element']
         player = elements[pid]
         ep_next = float(player.get('ep_next', 0) or 0)
-        my_players.append({
+        
+        # Determine current status based on position
+        is_starting = pick['position'] <= 11
+        role = ""
+        if pick['is_captain']: role = "(C)"
+        elif pick['is_vice_captain']: role = "(VC)"
+        
+        player_dict = {
             'id': pid,
             'name': player['web_name'],
             'element_type': player['element_type'],
@@ -215,7 +224,22 @@ def analyze_team(manager_id):
             'role_display': '',
             'status': 'Bench',
             'injury_warning': get_injury_warning(player)
-        })
+        }
+        my_players.append(player_dict.copy())
+        
+        # Build current lineup mapping
+        current_dict = player_dict.copy()
+        current_dict['status'] = 'Starting' if is_starting else 'Bench'
+        current_dict['is_captain'] = pick['is_captain']
+        current_dict['is_vice_captain'] = pick['is_vice_captain']
+        current_dict['role_display'] = role
+        current_dict['position'] = pick['position'] # To sort correctly
+        current_lineup_raw.append(current_dict)
+        
+    current_lineup_raw.sort(key=lambda x: x['position'])
+    
+    # Strip position for frontend consistency if desired, but fine to leave it.
+    current_lineup = current_lineup_raw
 
     starting_xi, bench = optimize_lineup(my_players)
     for p in starting_xi: p['status'] = 'Starting'
@@ -311,6 +335,7 @@ def analyze_team(manager_id):
         "available_chips": available_chips,
         "chip_strategy": chip_strategy,
         "action_plans": action_plans,
+        "current_lineup": current_lineup,
         "optimal_lineup": optimized_squad,
         "league_intel": intel
     }
