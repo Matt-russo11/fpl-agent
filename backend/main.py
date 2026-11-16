@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from scout import analyze_team
 from llm_agent import get_ai_response
+import database
 
 load_dotenv()
 
@@ -40,7 +41,8 @@ def scheduled_scout_job():
         try:
             result = analyze_team(manager_id)
             print(f"Autonomous Scout Job Complete. Target GW: {result.get('target_gw')}")
-            # In a full production app, you might email this result or save it to a DB
+            # Save the shortlist to the SQLite database so trends can be analyzed over time
+            database.save_scout_report(result)
         except Exception as e:
             print(f"Error running autonomous scout job: {e}")
     else:
@@ -71,6 +73,7 @@ def setup_scheduler():
 
 @app.on_event("startup")
 def startup_event():
+    database.init_db()
     setup_scheduler()
     scheduler.start()
 
@@ -94,8 +97,34 @@ def get_scout_report(manager_id: str = None):
     result = analyze_team(target_id)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+
+    try:
+        database.save_scout_report(result)
+    except Exception as e:
+        print(f"Could not save scout report to database: {e}")
         
     return result
+
+# === HISTORY ENDPOINTS (answers come from SQL queries in database.py) ===
+@app.get("/api/history/top-players")
+def history_top_players(limit: int = 10):
+    """Players who appear on the scout shortlist most often."""
+    return database.most_shortlisted_players(limit)
+
+@app.get("/api/history/teams")
+def history_teams():
+    """How many shortlist spots each team gets, with average expected points."""
+    return database.team_averages()
+
+@app.get("/api/history/player")
+def history_player(name: str):
+    """One player's shortlist ranking across saved reports."""
+    return database.player_history(name)
+
+@app.get("/api/history/value")
+def history_value(max_cost: float = 6.0, limit: int = 10):
+    """Best-scoring shortlisted players under a budget in the latest report."""
+    return database.best_value_picks(max_cost, limit)
 
 class ChatRequest(BaseModel):
     message: str

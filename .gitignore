@@ -7,3 +7,5 @@ build/
 *.json
 !package.json
 !package-lock.json
+# local SQLite database (rebuilt automatically)
+*.db
